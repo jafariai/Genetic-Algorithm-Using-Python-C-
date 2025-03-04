@@ -1,0 +1,49 @@
+import random
+import numpy as np
+
+def calculate_distance(route, distance_matrix):
+    return sum(distance_matrix[route[i]][route[i + 1]] for i in range(len(route) - 1)) + distance_matrix[route[-1]][route[0]]
+
+def create_initial_population(pop_size, num_cities):
+    return [random.sample(range(num_cities), num_cities) for _ in range(pop_size)]
+
+def tournament_selection(population, distance_matrix, k=3):
+    selected = random.sample(population, k)
+    return min(selected, key=lambda route: calculate_distance(route, distance_matrix))
+
+def ordered_crossover(parent1, parent2):
+    size = len(parent1)
+    start, end = sorted(random.sample(range(size), 2))
+    child = [-1] * size
+    child[start:end] = parent1[start:end]
+    fill_values = [gene for gene in parent2 if gene not in child]
+    child = [fill_values.pop(0) if gene == -1 else gene for gene in child]
+    return child
+
+def mutate(route, mutation_rate=0.1):
+    if random.random() < mutation_rate:
+        i, j = random.sample(range(len(route)), 2)
+        route[i], route[j] = route[j], route[i]
+    return route
+
+def genetic_algorithm(distance_matrix, pop_size=100, generations=500, mutation_rate=0.1):
+    num_cities = len(distance_matrix)
+    population = create_initial_population(pop_size, num_cities)
+    
+    for _ in range(generations):
+        new_population = []
+        for _ in range(pop_size // 2):
+            parent1 = tournament_selection(population, distance_matrix)
+            parent2 = tournament_selection(population, distance_matrix)
+            child1, child2 = ordered_crossover(parent1, parent2), ordered_crossover(parent2, parent1)
+            new_population.extend([mutate(child1, mutation_rate), mutate(child2, mutation_rate)])
+        population = new_population
+    
+    best_route = min(population, key=lambda route: calculate_distance(route, distance_matrix))
+    return best_route, calculate_distance(best_route, distance_matrix)
+
+distance_matrix = np.random.randint(10, 100, (10, 10))
+np.fill_diagonal(distance_matrix, 0)
+best_route, best_distance = genetic_algorithm(distance_matrix)
+print("Best Route:", best_route)
+print("Best Distance:", best_distance)
